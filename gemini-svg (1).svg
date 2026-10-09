@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100" height="100">
+  <!-- Fundo escuro arredondado -->
+  <rect width="100" height="100" rx="24" fill="#0f172a"/>
+  
+  <!-- Chávena / Cuia estilizada (Âmbar) -->
+  <path d="M28 42 H64 V62 C64 70 57 76 46 76 C35 76 28 70 28 62 Z" fill="#f59e0b"/>
+  <path d="M64 48 H69 C73 48 76 51 76 55 C76 59 73 62 69 62 H64 Z" fill="none" stroke="#f59e0b" stroke-width="4" stroke-linecap="round"/>
+  
+  <!-- Folha verde de Erva-Mate -->
+  <path d="M44 22 C44 22 58 24 60 36 C48 38 42 28 44 22 Z" fill="#10b981"/>
+  <path d="M44 34 Q48 29 54 26" fill="none" stroke="#064e3b" stroke-width="2" stroke-linecap="round"/>
+  
+  <!-- Vapor de café quente -->
+  <path d="M35 34 C33 30 38 27 36 22" fill="none" stroke="#fbbf24" stroke-width="3" stroke-linecap="round"/>
+</svg>
