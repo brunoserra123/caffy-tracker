@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Caffy & Mate - Rastreador de Cafeína</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+  </style>
+</head>
+<body class="bg-slate-900 text-slate-100 min-h-screen pb-12">
+
+  <div class="max-w-3xl mx-auto px-4 pt-8">
+    <!-- Header -->
+    <header class="flex justify-between items-center mb-8 border-b border-slate-800 pb-4">
+      <div>
+        <h1 class="text-2xl font-bold flex items-center gap-2 text-amber-400">
+          <i class="fa-solid fa-mug-hot"></i> Caffy & Mate
+        </h1>
+        <p class="text-xs text-slate-400">Controle de cafeína & chá mate com curva biológica</p>
+      </div>
+      <div class="text-right">
+        <label class="text-xs text-slate-400 block mb-1">Meta Diária (mg)</label>
+        <input type="number" id="limitInput" value="400" min="100" max="1000" step="50"
+          class="w-20 bg-slate-800 border border-slate-700 rounded px-2 py-1 text-center text-sm text-amber-300 font-bold focus:outline-none focus:border-amber-400">
+      </div>
+    </header>
+
+    <!-- Dashboards Principais -->
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
+      <!-- Total Ingerido Hoje -->
+      <div class="bg-slate-800/80 border border-slate-700 rounded-2xl p-5 shadow-lg relative overflow-hidden">
+        <div class="flex justify-between items-start mb-2">
+          <span class="text-sm font-medium text-slate-400">Consumido Hoje</span>
+          <span id="limitPercent" class="text-xs font-bold px-2 py-0.5 rounded-full bg-slate-700 text-slate-300">0%</span>
+        </div>
+        <div class="flex items-baseline gap-2 mb-3">
+          <span id="totalCaffeine" class="text-4xl font-extrabold text-white">0</span>
+          <span class="text-slate-400 font-semibold text-lg">/ <span id="limitDisplay">400</span> mg</span>
+        </div>
+        <!-- Barra de Progresso -->
+        <div class="w-full bg-slate-700 rounded-full h-3 overflow-hidden">
+          <div id="progressBar" class="bg-emerald-500 h-full rounded-full transition-all duration-300" style="width: 0%"></div>
+        </div>
+        <p id="alertMsg" class="text-xs mt-2 text-slate-400">Nenhum registro ainda hoje.</p>
+      </div>
+
+      <!-- Cafeína Ativa no Sangue (Meia-vida 5h) -->
+      <div class="bg-slate-800/80 border border-slate-700 rounded-2xl p-5 shadow-lg">
+        <div class="flex justify-between items-start mb-2">
+          <span class="text-sm font-medium text-slate-400">Ativa no Sangue Agora</span>
+          <i class="fa-solid fa-heart-pulse text-rose-400"></i>
+        </div>
+        <div class="flex items-baseline gap-2 mb-3">
+          <span id="activeCaffeine" class="text-4xl font-extrabold text-amber-400">0</span>
+          <span class="text-slate-400 font-semibold text-lg">mg</span>
+        </div>
+        <p class="text-xs text-slate-400">
+          <span class="font-medium text-slate-300">Impacto no Sono:</span> 
+          <span id="sleepNotice" class="text-emerald-400">Livre para dormir bem.</span>
+        </p>
+      </div>
+    </div>
+
+    <!-- Gráfico de Curva de Decaimento -->
+    <div class="bg-slate-800/80 border border-slate-700 rounded-2xl p-5 mb-8 shadow-lg">
+      <h2 class="text-sm font-semibold text-slate-300 mb-3 flex items-center gap-2">
+        <i class="fa-solid fa-chart-line text-blue-400"></i> Curva de Decaimento nas Próximas 16h
+      </h2>
+      <div class="h-48 w-full">
+        <canvas id="decayChart"></canvas>
+      </div>
+    </div>
+
+    <!-- Seção de Adição Rápida -->
+    <div class="mb-8">
+      <h2 class="text-sm font-semibold text-slate-400 uppercase tracking-wider mb-4">Adição Rápida</h2>
+
+      <!-- Chá Mate & Tradição Sulista -->
+      <div class="mb-5">
+        <span class="text-xs font-bold text-emerald-400 uppercase mb-2 block">
+          <i class="fa-solid fa-leaf"></i> Linha Mate & Chimarrão
+        </span>
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
+          <button onclick="addDrink('Cuia de Chimarrão', 100, 'Chimarrão tradicional')" class="bg-emerald-950/40 hover:bg-emerald-900/60 border border-emerald-800/60 rounded-xl p-3 text-left transition">
+            <div class="font-semibold text-emerald-300 text-sm">Chimarrão</div>
+            <div class="text-xs text-slate-400">1 Cuia (~100mg)</div>
+          </button>
+          <button onclick="addDrink('Tereré', 65, 'Copo de Tereré gelado')" class="bg-emerald-950/40 hover:bg-emerald-900/60 border border-emerald-800/60 rounded-xl p-3 text-left transition">
+            <div class="font-semibold text-emerald-300 text-sm">Tereré</div>
+            <div class="text-xs text-slate-400">1 Copo (~65mg)</div>
+          </button>
+          <button onclick="addDrink('Mate Gelado', 35, 'Copo de 300ml')" class="bg-emerald-950/40 hover:bg-emerald-900/60 border border-emerald-800/60 rounded-xl p-3 text-left transition">
+            <div class="font-semibold text-emerald-300 text-sm">Mate Gelado</div>
+            <div class="text-xs text-slate-400">300 ml (~35mg)</div>
+          </button>
+          <button onclick="addDrink('Chá Mate Quente', 45, 'Xícara 200ml')" class="bg-emerald-950/40 hover:bg-emerald-900/60 border border-emerald-800/60 rounded-xl p-3 text-left transition">
+            <div class="font-semibold text-emerald-300 text-sm">Mate Sachê</div>
+            <div class="text-xs text-slate-400">200 ml (~45mg)</div>
+          </button>
+        </div>
+      </div>
+
+      <!-- Cafés Clássicos -->
+      <div class="mb-5">
+        <span class="text-xs font-bold text-amber-400 uppercase mb-2 block">
+          <i class="fa-solid fa-mug-saucer"></i> Cafés
+        </span>
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
+          <button onclick="addDrink('Café Coado Tradicional', 50, 'Xícara 70ml')" class="bg-amber-950/40 hover:bg-amber-900/60 border border-amber-800/60 rounded-xl p-3 text-left transition">
+            <div class="font-semibold text-amber-300 text-sm">Café Coado</div>
+            <div class="text-xs text-slate-400">70 ml (~50mg)</div>
+          </button>
+          <button onclick="addDrink('Espresso Simples', 65, 'Dose 30ml')" class="bg-amber-950/40 hover:bg-amber-900/60 border border-amber-800/60 rounded-xl p-3 text-left transition">
+            <div class="font-semibold text-amber-300 text-sm">Espresso</div>
+            <div class="text-xs text-slate-400">30 ml (~65mg)</div>
+          </button>
+          <button onclick="addDrink('Espresso Duplo', 130, 'Dose dupla 60ml')" class="bg-amber-950/40 hover:bg-amber-900/60 border border-amber-800/60 rounded-xl p-3 text-left transition">
+            <div class="font-semibold text-amber-300 text-sm">Espresso Duplo</div>
+            <div class="text-xs text-slate-400">60 ml (~130mg)</div>
+          </button>
+          <button onclick="addDrink('Café Caneca', 140, 'Caneca 200ml')" class="bg-amber-950/40 hover:bg-amber-900/60 border border-amber-800/60 rounded-xl p-3 text-left transition">
+            <div class="font-semibold text-amber-300 text-sm">Caneca Coado</div>
+            <div class="text-xs text-slate-400">200 ml (~140mg)</div>
+          </button>
+        </div>
+      </div>
+
+      <!-- Item Customizado -->
+      <form id="customForm" onsubmit="handleCustomSubmit(event)" class="bg-slate-800/50 p-3 rounded-xl border border-slate-700 flex flex-wrap gap-2 items-center">
+        <input type="text" id="custName" placeholder="Outra bebida (ex: Energético)" required class="flex-1 min-w-[140px] bg-slate-900 border border-slate-700 rounded px-3 py-1.5 text-xs text-white">
+        <input type="number" id="custMg" placeholder="mg de cafeína" required min="1" max="1000" class="w-28 bg-slate-900 border border-slate-700 rounded px-3 py-1.5 text-xs text-white">
+        <button type="submit" class="bg-slate-700 hover:bg-slate-600 text-white font-medium px-4 py-1.5 rounded text-xs transition">
+          + Inserir
+        </button>
+      </form>
+    </div>
+
+    <!-- Histórico de Consumo -->
+    <div class="bg-slate-800/80 border border-slate-700 rounded-2xl p-5 shadow-lg">
+      <div class="flex justify-between items-center mb-4">
+        <h2 class="text-sm font-semibold text-slate-300">Histórico de Hoje</h2>
+        <button onclick="clearAll()" class="text-xs text-rose-400 hover:text-rose-300 transition">Limpar Tudo</button>
+      </div>
+      <div id="logList" class="space-y-2 max-h-60 overflow-y-auto pr-1"></div>
+    </div>
+  </div>
+
+  <script>
+    const HALF_LIFE_HOURS = 5.0;
+    let logs = JSON.parse(localStorage.getItem('caffy_logs') || '[]');
+    let dailyLimit = parseInt(localStorage.getItem('caffy_limit') || '400');
+    let chartInstance = null;
+
+    document.getElementById('limitInput').value = dailyLimit;
+    document.getElementById('limitDisplay').textContent = dailyLimit;
+
+    document.getElementById('limitInput').addEventListener('change', (e) => {
+      dailyLimit = parseInt(e.target.value) || 400;
+      localStorage.setItem('caffy_limit', dailyLimit);
+      document.getElementById('limitDisplay').textContent = dailyLimit;
+      render();
+    });
+
+    function saveLogs() {
+      localStorage.setItem('caffy_logs', JSON.stringify(logs));
+    }
+
+    function addDrink(name, mg, notes = '') {
+      const now = new Date();
+      logs.unshift({
+        id: Date.now(),
+        name,
+        mg: Number(mg),
+        notes,
+        timestamp: now.toISOString(),
+        timeStr: now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      });
+      saveLogs();
+      render();
+    }
+
+    function deleteLog(id) {
+      logs = logs.filter(item => item.id !== id);
+      saveLogs();
+      render();
+    }
+
+    function clearAll() {
+      if (confirm('Deseja zerar os registros de hoje?')) {
+        logs = [];
+        saveLogs();
+        render();
+      }
+    }
+
+    function handleCustomSubmit(e) {
+      e.preventDefault();
+      const name = document.getElementById('custName').value.trim();
+      const mg = document.getElementById('custMg').value;
+      if (name && mg) {
+        addDrink(name, mg, 'Personalizado');
+        document.getElementById('custName').value = '';
+        document.getElementById('custMg').value = '';
+      }
+    }
+
+    function calculateActiveCaffeineAt(targetDate) {
+      let active = 0;
+      const targetTime = targetDate.getTime();
+      logs.forEach(log => {
+        const drinkTime = new Date(log.timestamp).getTime();
+        const diffHours = (targetTime - drinkTime) / (1000 * 60 * 60);
+        if (diffHours >= 0) {
+          active += log.mg * Math.pow(0.5, diffHours / HALF_LIFE_HOURS);
+        }
+      });
+      return active;
+    }
+
+    function renderChart() {
+      const ctx = document.getElementById('decayChart').getContext('2d');
+      const labels = [];
+      const dataPoints = [];
+      const now = new Date();
+
+      for (let i = 0; i <= 16; i += 2) {
+        const d = new Date(now.getTime() + i * 60 * 60 * 1000);
+        labels.push(d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
+        dataPoints.push(Math.round(calculateActiveCaffeineAt(d)));
+      }
+
+      if (chartInstance) {
+        chartInstance.data.labels = labels;
+        chartInstance.data.datasets[0].data = dataPoints;
+        chartInstance.update();
+      } else {
+        chartInstance = new Chart(ctx, {
+          type: 'line',
+          data: {
+            labels,
+            datasets: [{
+              label: 'Cafeína Ativa (mg)',
+              data: dataPoints,
+              borderColor: '#f59e0b',
+              backgroundColor: 'rgba(245, 158, 11, 0.1)',
+              fill: true,
+              tension: 0.35,
+              pointRadius: 3
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: {
+              x: { grid: { color: 'rgba(255, 255, 255, 0.05)' }, ticks: { color: '#94a3b8', font: { size: 10 } } },
+              y: { grid: { color: 'rgba(255, 255, 255, 0.05)' }, ticks: { color: '#94a3b8', font: { size: 10 } }, beginAtZero: true }
+            }
+          }
+        });
+      }
+    }
+
+    function render() {
+      const totalMg = logs.reduce((sum, item) => sum + item.mg, 0);
+      document.getElementById('totalCaffeine').textContent = totalMg;
+
+      const pct = Math.min(Math.round((totalMg / dailyLimit) * 100), 100);
+      const bar = document.getElementById('progressBar');
+      const badge = document.getElementById('limitPercent');
+      const alertMsg = document.getElementById('alertMsg');
+
+      badge.textContent = `${pct}%`;
+      bar.style.width = `${pct}%`;
+
+      if (totalMg > dailyLimit) {
+        bar.className = 'bg-rose-500 h-full rounded-full transition-all duration-300';
+        badge.className = 'text-xs font-bold px-2 py-0.5 rounded-full bg-rose-950 text-rose-400 border border-rose-800';
+        alertMsg.textContent = `Atenção: Você ultrapassou o limite diário em ${totalMg - dailyLimit} mg!`;
+        alertMsg.className = 'text-xs mt-2 text-rose-400 font-semibold';
+      } else if (pct >= 80) {
+        bar.className = 'bg-amber-500 h-full rounded-full transition-all duration-300';
+        badge.className = 'text-xs font-bold px-2 py-0.5 rounded-full bg-amber-950 text-amber-400 border border-amber-800';
+        alertMsg.textContent = 'Próximo do limite diário sugerido.';
+        alertMsg.className = 'text-xs mt-2 text-amber-400';
+      } else {
+        bar.className = 'bg-emerald-500 h-full rounded-full transition-all duration-300';
+        badge.className = 'text-xs font-bold px-2 py-0.5 rounded-full bg-emerald-950 text-emerald-400 border border-emerald-800';
+        alertMsg.textContent = 'Consumo dentro da margem saudável.';
+        alertMsg.className = 'text-xs mt-2 text-slate-400';
+      }
+
+      const active = Math.round(calculateActiveCaffeineAt(new Date()));
+      document.getElementById('activeCaffeine').textContent = active;
+
+      const sleepNotice = document.getElementById('sleepNotice');
+      if (active > 100) {
+        sleepNotice.textContent = 'Alto impacto. Insônia provável se for dormir nas próximas 6h.';
+        sleepNotice.className = 'text-rose-400 font-medium';
+      } else if (active > 35) {
+        sleepNotice.textContent = 'Impacto moderado. Pode reduzir sono profundo.';
+        sleepNotice.className = 'text-amber-400 font-medium';
+      } else {
+        sleepNotice.textContent = 'Nível baixo. Livre para dormir bem.';
+        sleepNotice.className = 'text-emerald-400';
+      }
+
+      const listEl = document.getElementById('logList');
+      if (logs.length === 0) {
+        listEl.innerHTML = '<p class="text-xs text-slate-500 text-center py-4">Nenhuma bebida registrada hoje.</p>';
+      } else {
+        listEl.innerHTML = logs.map(item => `
+          <div class="flex justify-between items-center bg-slate-900/60 px-3 py-2 rounded-lg border border-slate-800">
+            <div>
+              <div class="text-xs font-bold text-white">${item.name}</div>
+              <div class="text-[10px] text-slate-400">${item.timeStr} ${item.notes ? '• ' + item.notes : ''}</div>
+            </div>
+            <div class="flex items-center gap-3">
+              <span class="text-xs font-semibold text-amber-300">+${item.mg} mg</span>
+              <button onclick="deleteLog(${item.id})" class="text-slate-500 hover:text-rose-400 transition text-xs">
+                <i class="fa-solid fa-trash"></i>
+              </button>
+            </div>
+          </div>
+        `).join('');
+      }
+
+      renderChart();
+    }
+
+    render();
+    setInterval(render, 60000);
+  </script>
+</body>
+</html>
